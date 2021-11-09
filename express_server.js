@@ -26,15 +26,10 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+
 app.get("/urls", (req, res) => {
   const templateVars = { urls: urlDatabase };
   res.render("urls_index", templateVars);
-});
-
-// needs to be defined before the GET /urls/:id route
-// as Express will think that new is a route parameter
-app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
 });
 
 app.post("/urls", (req, res) => {
@@ -44,7 +39,22 @@ app.post("/urls", (req, res) => {
   urlDatabase[shortURL] = longURL;
 
   console.log(req.body);  // Log the POST request body to the console
-  res.redirect(`/urls/${shortURL}`);
+  res.redirect(`/urls/${shortURL}`); // Redirect to '/urls/:shortURL'
+});
+
+
+// needs to be defined before the GET /urls/:id route
+// as Express will think that new is a route parameter
+app.get("/urls/new", (req, res) => {
+  res.render("urls_new");
+});
+
+// Delete url 
+app.post("/urls/:shortURL/delete", (req, res) => {
+  const shortURL = req.params.shortURL;
+  delete urlDatabase[shortURL]; // delete the resource
+
+  res.redirect('/urls');
 });
 
 app.get("/u/:shortURL", (req, res) => {
