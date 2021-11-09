@@ -37,22 +37,36 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
+app.post("/urls", (req, res) => {
+  const shortURL = generateRandomString();
+  const longURL = req.body.longURL;
+  // shortURL-longURL key-value pair are saved to the urlDatabase
+  urlDatabase[shortURL] = longURL;
+
+  console.log(req.body);  // Log the POST request body to the console
+  app.get('/urls/:shortURL', function (req, res) {
+    res.redirect(`/urls/${shortURL}`);
+  });
+});
+
+app.get("/u/:shortURL", (req, res) => {
+  const shortURL = req.params.shortURL;
+  const longURL = urlDatabase[shortURL];
+  res.redirect(longURL);
+});
+
 app.get('/urls/:shortURL', function (req, res) {
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[shortURL];
   const templateVars = { 'shortURL': shortURL, 'longURL': longURL };
+  //res.redirect(longURL);
   res.render("urls_show", templateVars);
 })
-
-app.post("/urls", (req, res) => {
-  console.log(req.body);  // Log the POST request body to the console
-  res.send("Ok");         // Respond with 'Ok' (we will replace this)
-});
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
 function generateRandomString() {
-  return Math.random().toString(36).substr(2, 8);
+  return Math.random().toString(36).substr(2, 6);
 }
