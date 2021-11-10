@@ -12,9 +12,16 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // related data
+let loggedin = false;
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+      longURL: "https://www.tsn.ca",
+      userID: "aJ48lW"
+  },
+  i3BoGr: {
+      longURL: "https://www.google.ca",
+      userID: "aJ48lW"
+  }
 };
 const users = {
   "userRandomID": {
@@ -45,7 +52,7 @@ app.get("/urls.json", (req, res) => {
 
 
 app.get("/urls", (req, res) => {
-  console.log(users);
+  console.log(urlDatabase, users);
   const id = req.cookies["user_id"];
 
   // if(!id) {
@@ -61,25 +68,35 @@ app.get("/urls", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  const shortURL = generateRandomString(6);
-  const longURL = req.body.longURL;
-  // shortURL-longURL key-value pair are saved to the urlDatabase
-  urlDatabase[shortURL] = longURL;
+  if (loggedin) {
+    const shortURL = generateRandomString(6);
+    const longURL = req.body.longURL;
+    // shortURL-longURL key-value pair are saved to the urlDatabase
+    //urlDatabase[shortURL] = longURL;
+    setShortUrl(shortURL, longURL, req.cookies["user_id"]);
 
-  console.log(req.body);  // Log the POST request body to the console
-  res.redirect(`/urls/${shortURL}`); // Redirect to '/urls/:shortURL'
+    console.log(req.body);  // Log the POST request body to the console
+    res.redirect(`/urls/${shortURL}`); // Redirect to '/urls/:shortURL'
+  }
+  else {
+    return res.status(401).send("Please Login to Access");
+  }
 });
 
 
 // needs to be defined before the GET /urls/:id route
 // as Express will think that new is a route parameter
 app.get("/urls/new", (req, res) => {
-  const id = req.cookies["user_id"];
+  if (loggedin) {
+    const id = req.cookies["user_id"];
+    const templateVars = {
+      user: users[id],
+    };
 
-  const templateVars = {
-    user: users[id],
-  };
-  res.render("urls_new", templateVars);
+    res.render("urls_new", templateVars);
+  }
+  else
+    res.redirect('/login');
 });
 
 // User Login Page
@@ -88,7 +105,11 @@ app.get("/login", (req, res) => {
   const templateVars = {
     user: users[id]
   };
-  res.render('login', templateVars);
+
+  if (!loggedin)
+    res.render('login', templateVars);
+  else
+    res.redirect('/urls');
 });
 app.post("/login", (req, res) => {
   const email = req.body.email;
@@ -99,12 +120,15 @@ app.post("/login", (req, res) => {
     return res.status(403).send("Wrong Email or Passworrd, Please Enter again.");
     //return setTimeout(() => {res.redirect('/urls')}, 3000);
   }
-    res.cookie('user_id', user.id);
-    res.redirect('/urls');
+
+  loggedin = true;
+  res.cookie('user_id', user.id);
+  res.redirect('/urls');
 });
 
 // User Logout Page
 app.post("/logout", (req, res) => {
+  loggedin = false;
   res.clearCookie("user_id");
   res.redirect('/urls');
 });
@@ -117,7 +141,10 @@ app.get("/register", (req, res) => {
   const templateVars = {
     user: users[id]
   };
-  res.render('register', templateVars);
+  if (!loggedin)
+    res.render('register', templateVars);
+  else
+    res.redirect('/urls');
 });
 
 app.post("/register", (req, res) => {
@@ -136,6 +163,7 @@ app.post("/register", (req, res) => {
     password: password
   };
 
+  loggedin = true;
   users[tmp.id] = tmp;
   res.cookie('user_id', tmp.id);
   res.redirect('/urls');
@@ -146,7 +174,8 @@ app.post("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = req.body.longURL;
 
-  urlDatabase[shortURL] = longURL;
+  //urlDatabase[shortURL] = longURL;
+  setLongUrl(shortURL, longURL);
   res.redirect('/urls');
 });
 
@@ -166,7 +195,8 @@ app.get("/u/:shortURL", (req, res) => {
 
 app.get('/urls/:shortURL', function (req, res) {
   const shortURL = req.params.shortURL;
-  const longURL = urlDatabase[shortURL];
+  //const longURL = urlDatabase[shortURL];
+  longURL = getLongUrl(shortURL);
   const id = req.cookies["user_id"];
 
   const templateVars = {
@@ -179,6 +209,18 @@ app.get('/urls/:shortURL', function (req, res) {
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
+
+function getLongUrl(shortURL) {
+  return urlDatabase[shortURL].longURL;
+};
+
+function setShortUrl(shortURL, longURL, userID) {
+  urlDatabase[shortURL] = {longURL: longURL, userID: userID};
+};
+
+function setLongUrl(shortURL, longURL) {
+  urlDatabase[shortURL].longURL = longURL;
+};
 
 function generateRandomString(length) {
   return Math.random().toString(36).substr(2, length);
@@ -193,3 +235,4 @@ const findUserByEmail = (email) => {
   }
   return null;
 }
+
