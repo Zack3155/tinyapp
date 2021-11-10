@@ -72,7 +72,6 @@ app.post("/urls", (req, res) => {
     const shortURL = generateRandomString(6);
     const longURL = req.body.longURL;
     // shortURL-longURL key-value pair are saved to the urlDatabase
-    //urlDatabase[shortURL] = longURL;
     setShortUrl(shortURL, longURL, req.cookies["user_id"]);
 
     console.log(req.body);  // Log the POST request body to the console
@@ -174,7 +173,6 @@ app.post("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = req.body.longURL;
 
-  //urlDatabase[shortURL] = longURL;
   setLongUrl(shortURL, longURL);
   res.redirect('/urls');
 });
@@ -189,13 +187,15 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 app.get("/u/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
-  const longURL = urlDatabase[shortURL];
+  if(!urlDatabase[shortURL])
+  return res.status(401).send("Id does not exist!");
+
+  const longURL = getLongUrl(shortURL);
   res.redirect(longURL);
 });
 
 app.get('/urls/:shortURL', function (req, res) {
   const shortURL = req.params.shortURL;
-  //const longURL = urlDatabase[shortURL];
   longURL = getLongUrl(shortURL);
   const id = req.cookies["user_id"];
 
