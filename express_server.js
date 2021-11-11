@@ -11,16 +11,17 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Cookie-parser
 app.use(cookieParser());
 
+////////////////////////////////////////////////////////////////////////////
 // related data
 let loggedin = false;
 const urlDatabase = {
   b6UTxQ: {
-      longURL: "https://www.tsn.ca",
-      userID: "aJ48lW"
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW"
   },
   i3BoGr: {
-      longURL: "https://www.google.ca",
-      userID: "aJ48lW"
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW"
   }
 };
 const users = {
@@ -36,37 +37,44 @@ const users = {
   }
 }
 
-
+////////////////////////////////////////////////////////////////////////////
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  if (!loggedin)
+    res.redirect('/login');
+  else
+    res.redirect('/urls');
 });
 
 app.get("/hello", (req, res) => {
   const templateVars = { greeting: 'Hello World!' };
   res.render("hello_world", templateVars);
 });
-
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
+////////////////////////////////////////////////////////////////////////////
 
-
+// Main requests
 app.get("/urls", (req, res) => {
-  console.log(urlDatabase, users);
-  const id = req.cookies["user_id"];
+  if (loggedin) {
+    const id = req.cookies["user_id"];
+    const urls = urlsForUser(id);
+    console.log(urlDatabase, users);
 
-  // if(!id) {
-  //   res.redirect('/register')
-  // }
-
-  const templateVars = {
-    user: users[id],
-    urls: urlDatabase
-  };
-  //console.log(templateVars.user.email);
-  res.render("urls_index", templateVars);
+    const templateVars = {
+      user: users[id],
+      urls: urls
+    };
+    //console.log(templateVars.user.email);
+    res.render("urls_index", templateVars);
+  }
+  else {
+    //res.redirect('/login');
+    return res.status(401).send("Please Login to Access");
+  }
 });
 
+// Generates a short URL, saves it, and associates it with the user
 app.post("/urls", (req, res) => {
   if (loggedin) {
     const shortURL = generateRandomString(6);
@@ -78,10 +86,11 @@ app.post("/urls", (req, res) => {
     res.redirect(`/urls/${shortURL}`); // Redirect to '/urls/:shortURL'
   }
   else {
+    //res.redirect('/login');
     return res.status(401).send("Please Login to Access");
   }
 });
-
+////////////////////////////////////////////////////////////////////////////
 
 // needs to be defined before the GET /urls/:id route
 // as Express will think that new is a route parameter
@@ -97,6 +106,7 @@ app.get("/urls/new", (req, res) => {
   else
     res.redirect('/login');
 });
+////////////////////////////////////////////////////////////////////////////
 
 // User Login Page
 app.get("/login", (req, res) => {
@@ -124,6 +134,7 @@ app.post("/login", (req, res) => {
   res.cookie('user_id', user.id);
   res.redirect('/urls');
 });
+////////////////////////////////////////////////////////////////////////////
 
 // User Logout Page
 app.post("/logout", (req, res) => {
@@ -131,7 +142,7 @@ app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
   res.redirect('/urls');
 });
-
+////////////////////////////////////////////////////////////////////////////
 
 // User Register Page
 app.get("/register", (req, res) => {
@@ -167,28 +178,45 @@ app.post("/register", (req, res) => {
   res.cookie('user_id', tmp.id);
   res.redirect('/urls');
 });
+////////////////////////////////////////////////////////////////////////////
 
 // Update Long url 
 app.post("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = req.body.longURL;
+  const id = req.cookies["user_id"];
 
-  setLongUrl(shortURL, longURL);
-  res.redirect('/urls');
+  if (loggedin && urlDatabase[shortURL].userID === id) {
+    setLongUrl(shortURL, longURL);
+    res.redirect('/urls');
+  }
+  else {
+    //res.redirect('/login');
+    return res.status(401).send("Please Login Corresponding Account to Access");
+  }
 });
+////////////////////////////////////////////////////////////////////////////
 
 // Delete url 
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
-  delete urlDatabase[shortURL]; // delete the resource
+  const id = req.cookies["user_id"];
 
-  res.redirect('/urls');
+  if (loggedin && urlDatabase[shortURL].userID === id) {
+    delete urlDatabase[shortURL]; // delete the resource
+    res.redirect('/urls');
+  }
+  else {
+    //res.redirect('/login');
+    return res.status(401).send("Please Login Corresponding Account to Access");
+  }
 });
+////////////////////////////////////////////////////////////////////////////
 
 app.get("/u/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
-  if(!urlDatabase[shortURL])
-  return res.status(401).send("Id does not exist!");
+  if (!urlDatabase[shortURL])
+    return res.status(401).send("Shorten URL Does Not Exist.");
 
   const longURL = getLongUrl(shortURL);
   res.redirect(longURL);
@@ -196,26 +224,39 @@ app.get("/u/:shortURL", (req, res) => {
 
 app.get('/urls/:shortURL', function (req, res) {
   const shortURL = req.params.shortURL;
-  longURL = getLongUrl(shortURL);
   const id = req.cookies["user_id"];
 
-  const templateVars = {
-    user: users[id],
-    'shortURL': shortURL, 'longURL': longURL
-  };
-  res.render("urls_show", templateVars);
+  try {
+    if (urlDatabase[shortURL].userID === id) {
+      const longURL = getLongUrl(shortURL);
+      const templateVars = {
+        user: users[id],
+        'shortURL': shortURL, 'longURL': longURL
+      };
+      res.render("urls_show", templateVars);
+    }
+    else {
+      //res.redirect('/login');
+      return res.status(401).send("Please Login Corresponding Account to Access");
+    }
+  }
+  catch (err) {
+    return res.status(401).send("Shorten URL Does Not Exist.");
+  }
 })
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
+////////////////////////////////////////////////////////////////////////////
 
+// Helper functions
 function getLongUrl(shortURL) {
   return urlDatabase[shortURL].longURL;
 };
 
 function setShortUrl(shortURL, longURL, userID) {
-  urlDatabase[shortURL] = {longURL: longURL, userID: userID};
+  urlDatabase[shortURL] = { longURL: longURL, userID: userID };
 };
 
 function setLongUrl(shortURL, longURL) {
@@ -234,5 +275,14 @@ const findUserByEmail = (email) => {
     }
   }
   return null;
+}
+
+function urlsForUser(id) {
+  let tmp = {};
+  for (const url in urlDatabase) {
+    if (urlDatabase[url].userID === id)
+      tmp[url] = urlDatabase[url];
+  }
+  return tmp;
 }
 
