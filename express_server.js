@@ -85,7 +85,6 @@ app.get("/urls.json", (req, res) => {
 // Main requests
 app.get("/urls", (req, res) => {
   if (loggedin) {
-    //const id = req.cookies["user_id"];
     const id = req.session.user_id;
     const urls = urlDatabase.urlsForUser(id);
     console.log(urlDatabase, users, urls);
@@ -98,7 +97,6 @@ app.get("/urls", (req, res) => {
     res.render("urls_index", templateVars);
   }
   else {
-    //res.redirect('/login');
     return res.status(401).send("Please Login to Access");
   }
 });
@@ -115,7 +113,6 @@ app.post("/urls", (req, res) => {
     res.redirect(`/urls/${shortURL}`); // Redirect to '/urls/:shortURL'
   }
   else {
-    //res.redirect('/login');
     return res.status(401).send("Please Login to Access");
   }
 });
@@ -125,7 +122,6 @@ app.post("/urls", (req, res) => {
 // as Express will think that new is a route parameter
 app.get("/urls/new", (req, res) => {
   if (loggedin) {
-    //const id = req.cookies["user_id"];
     const id = req.session.user_id;
     const templateVars = {
       user: users[id],
@@ -141,7 +137,6 @@ app.get("/urls/new", (req, res) => {
 
 // User Login Page
 app.get("/login", (req, res) => {
-  //const id = req.cookies["user_id"];
   const id = req.session.user_id;
   const templateVars = {
     user: users[id],
@@ -160,11 +155,9 @@ app.post("/login", (req, res) => {
 
   if (!user || !bcrypt.compareSync(password, user.password)) {
     return res.status(403).send("Wrong Email or Passworrd, Please Enter again.");
-    //return setTimeout(() => {res.redirect('/urls')}, 3000);
   }
 
   loggedin = true;
-  //res.cookie('user_id', user.id);
   req.session.user_id = user.id;
   res.redirect('/urls');
 });
@@ -180,7 +173,6 @@ app.post("/logout", (req, res) => {
 
 // User Register Page
 app.get("/register", (req, res) => {
-  //const id = req.cookies["user_id"];
   const id = req.session.user_id;
 
   const templateVars = {
@@ -211,7 +203,6 @@ app.post("/register", (req, res) => {
 
   loggedin = true;
   users[tmp.id] = tmp;
-  //res.cookie('user_id', tmp.id);
   req.session.user_id = tmp.id;
   res.redirect('/urls');
 });
@@ -221,7 +212,6 @@ app.post("/register", (req, res) => {
 app.post("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = req.body.longURL;
-  //const id = req.cookies["user_id"];
   const id = req.session.user_id;
 
   if (loggedin && urlDatabase[shortURL].userID === id) {
@@ -229,7 +219,6 @@ app.post("/urls/:shortURL", (req, res) => {
     res.redirect('/urls');
   }
   else {
-    //res.redirect('/login');
     return res.status(401).send("Please Login Corresponding Account to Access");
   }
 });
@@ -238,7 +227,6 @@ app.post("/urls/:shortURL", (req, res) => {
 // Delete url 
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
-  //const id = req.cookies["user_id"];
   const id = req.session.user_id;
 
   if (loggedin && urlDatabase[shortURL].userID === id) {
@@ -246,7 +234,6 @@ app.post("/urls/:shortURL/delete", (req, res) => {
     res.redirect('/urls');
   }
   else {
-    //res.redirect('/login');
     return res.status(401).send("Please Login Corresponding Account to Access");
   }
 });
@@ -263,7 +250,6 @@ app.get("/u/:shortURL", (req, res) => {
 
 app.get('/urls/:shortURL', function (req, res) {
   const shortURL = req.params.shortURL;
-  //const id = req.cookies["user_id"];
   const id = req.session.user_id;
 
   try {
@@ -277,7 +263,6 @@ app.get('/urls/:shortURL', function (req, res) {
       res.render("urls_show", templateVars);
     }
     else {
-      //res.redirect('/login');
       return res.status(401).send("Please Login Corresponding Account to Access");
     }
   }
